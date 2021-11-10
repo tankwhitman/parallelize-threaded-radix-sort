@@ -15,9 +15,25 @@ program 3
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <pthread.h>
+#include <time.h>
+
 
 #define BUF_SIZE 1024
+int count = 0;
+int openFD; //the stream for writing so each thread can access it
+union dtob
+  {
+    int value;
+    char bytes[4];
+  };
+union dtob num;
 
+
+
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t conditional = PTHREAD_COND_INITIALIZER;
 
 //standard my print
 void myPrint(const char *str)
@@ -51,37 +67,124 @@ char * dupString(const char *val)
     strcpy(outStr, val);
 }
 
+int genRand(int low, int high)
+{
+  int rng = high - low + 1;
+  double drnd = rand();
+  int irnd = drnd/((double) RAND_MAX + 1) * rng;
+  return low + irnd;
+}
+
+int calcDig(int number)
+{
+    int count = 0;
+    do
+    {
+        count++;
+        number /= 10;
+    } while(number != 0);
+
+    return count;
+
+}
+
+//genrand thread()
+void * thread(void* high, void* low, void *count)
+{
+    int highVal = *((int *)high);
+    int lowVal = *((int*)low);
+    int numCount = *((int *) count);
+    int out = 0;
+    for(;;)
+    {
+        int chunksO = 0;
+        for(chunksO; chunksO < 3; chunksO++)
+        {
+            num.value = genRand(lowVal, highVal);
+            //CRITICAL SECTION
+            pthread_mutex_lock(&mutex);
+            /*while(count == 0)
+            {
+                pthread_cond_wait(&conditional, &mutex);
+            }*/
+
+            write(openFD, num.bytes, 4);
+
+            pthread_mutex_unlock(&mutex);
+
+
+            //END CRITICAL
+            out++;
+            if(out == count)
+            {
+                pthread_exit(NULL);
+            }
+
+        }
+        nanosleep((const struct timespec[]){{0, 500}}, NULL);
+
+    }
+
+
+}
+
+
+
+
 
 int main(int argc, char *argv[])
 {
-    int smallest;
-    int largest;
-    int numCreate;
-    do
-    {
-        myPrint("Please enter the smallest number greater than 0: ");
-        read(STDIN_FILENO, &smallest, sizeof(int)) ;
-    } while (smallest < 0);
-    myPrint("\n");
-    do
-    {
-        myPrint("Please enter the largest number less than 100000: ");
-        read(STDIN_FILENO, &largest, sizeof(int)) ;
+    int smallest=0;
+    int largest=0;
+    int numCreate=0;
+    char buf[BUF_SIZE];
 
-    } while (largest > 100000);
-    myPrint("\n");
-    do
+    srand(time(NULL));
+
+    myPrint("Please enter the smallest number :");
+    read(STDIN_FILENO, &buf, BUF_SIZE) ;
+    smallest = atoi(buf);
+    buf[0]= '\0';
+    
+    myPrint("\nPlease enter the largest number: ");
+    read(STDIN_FILENO, &buf, BUF_SIZE) ;
+    largest = atoi(buf);
+    buf[0]= '\0';
+    
+    myPrint("\nPlease enter the number of integers to genterate: ");
+    read(STDIN_FILENO, &buf, BUF_SIZE) ;
+    numCreate = atoi(buf);
+    buf[0]= '\0';
+
+    int numDigSmall = calcDig(smallest);
+    int numDigLarge = calcDig(largest);
+    int numBuckets = numDigLarge - numDigSmall + 1;
+    //myPrintInt(numBuckets);
+    int valsPB = numCreate / numBuckets;
+    int openFD;
+
+    mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH | S_IWOTH;
+    mode_t flags = O_CREAT | O_TRUNC | O_WRONLY;
+
+    openFD = open("data.dat", flags, perms);
+
+    if(openFD < 0)
     {
-        myPrint("Please enter the number of integers to genterate: ");
-        read(STDIN_FILENO, &numCreate, sizeof(int)) ;
-    } while (numCreate < 0);
-    
-    myPrint("smallest:");
-    myPrintInt(smallest);
-    myPrint("\nlargest:");
-    myPrintInt(largest);
-    myPrint("\nnum to create:");
-    myPrintInt(numCreate);
-    
+        exit(EXIT_FAILURE);
+    }
+    //for loop for num of threads
+    //you can spawn them to run at multiple times
+    //however you  need to use mutexes to lock the critical section - the write part.
+    for(int i = 0; i < numBuckets; i++)
+    {
+        
+
+    }
+
+    //wait for threads to exit and the close file and exit
+
     exit(EXIT_SUCCESS);
+
+
+    return 0;
 }

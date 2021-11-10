@@ -35,6 +35,12 @@ union dtob num;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t conditional = PTHREAD_COND_INITIALIZER;
 
+
+struct {
+    pthread_t threadID;
+} *thread;
+
+
 //standard my print
 void myPrint(const char *str)
 {
@@ -65,6 +71,7 @@ char * dupString(const char *val)
         exit(EXIT_FAILURE);
     }
     strcpy(outStr, val);
+    return outStr;
 }
 
 int genRand(int low, int high)
@@ -89,16 +96,17 @@ int calcDig(int number)
 }
 
 //genrand thread()
-void * thread(void* high, void* low, void *count)
+void * threadFunc(void* high, void* low, void *count)
 {
     int highVal = *((int *)high);
     int lowVal = *((int*)low);
     int numCount = *((int *) count);
     int out = 0;
+    union dtob num;
     for(;;)
     {
         int chunksO = 0;
-        for(chunksO; chunksO < 3; chunksO++)
+        for(; chunksO < 3; chunksO++)
         {
             num.value = genRand(lowVal, highVal);
             //CRITICAL SECTION
@@ -115,7 +123,7 @@ void * thread(void* high, void* low, void *count)
 
             //END CRITICAL
             out++;
-            if(out == count)
+            if(out == numCount)
             {
                 pthread_exit(NULL);
             }
@@ -175,9 +183,18 @@ int main(int argc, char *argv[])
     //for loop for num of threads
     //you can spawn them to run at multiple times
     //however you  need to use mutexes to lock the critical section - the write part.
+    thread = calloc(numBuckets, sizeof(*thread));
+    int s;
     for(int i = 0; i < numBuckets; i++)
     {
+        //create conditions for low - high bucket
+        if(i=0)
+        {
+            s = pthread_create(&thread[i].threadID,NULL,threadFunc, &numDigLarge, &numDigSmall, &valsPB);
+        }
         
+        
+        s = pthread_create(&thread[i].threadID,NULL,threadFunc, &numDigLarge, &numDigSmall, &valsPB);
 
     }
 

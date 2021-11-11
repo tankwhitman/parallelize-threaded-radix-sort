@@ -40,6 +40,13 @@ struct {
     pthread_t threadID;
 } *thread;
 
+struct{
+    int bucketID;
+    int lowrange;
+    int highrange;
+    int numDig;
+} *bucket;
+
 
 //standard my print
 void myPrint(const char *str)
@@ -96,9 +103,10 @@ int calcDig(int number)
 }
 
 //genrand thread()
-void * threadFunc(void* high, void* low, void *count)
+void * threadFunc(void* bucketpass)
 {
-    int highVal = *((int *)high);
+    bucket = (struct *) bucketpass;
+    int highVal = bucket.highval;
     int lowVal = *((int*)low);
     int numCount = *((int *) count);
     int out = 0;
@@ -167,7 +175,41 @@ int main(int argc, char *argv[])
     int numDigSmall = calcDig(smallest);
     int numDigLarge = calcDig(largest);
     int numBuckets = numDigLarge - numDigSmall + 1;
-    //myPrintInt(numBuckets);
+    bucket = calloc(numBuckets, sizeof(*bucket));
+
+    int tmp = largest;
+    int range[] = { 0 , 9, 10, 100, 1000, 10000, 100000, 1000000, 100000000, 99999999};
+    for(int i = 0; i < numBuckets; i ++)
+    {
+        if(i == 0)
+        {
+            bucket[i].numDig = numDigSmall;
+            bucket[i].lowrange = smallest;
+            for(int j = 9; j > 0;)
+            {
+                if(smallest < range[j])
+                {
+                    j--;
+                }
+                else
+                {
+                    bucket[i].highrange = range[j]-1;
+                }
+            }
+        }
+        else
+        {
+            bucket[i].numDig = bucket[i-1].numDig + 1;
+            bucket[i].lowrange = bucket[i-1].highrange + 1;
+            bucket[i].highrange = (bucket[i].lowrange * 10) - 1;
+        }
+        
+        
+
+    }
+
+
+
     int valsPB = numCreate / numBuckets;
     int openFD;
 
@@ -188,13 +230,8 @@ int main(int argc, char *argv[])
     for(int i = 0; i < numBuckets; i++)
     {
         //create conditions for low - high bucket
-        if(i=0)
-        {
-            s = pthread_create(&thread[i].threadID,NULL,threadFunc, &numDigLarge, &numDigSmall, &valsPB);
-        }
+        s = pthread_create(&thread[i].threadID,NULL,threadFunc, &bucket[i]);
         
-        
-        s = pthread_create(&thread[i].threadID,NULL,threadFunc, &numDigLarge, &numDigSmall, &valsPB);
 
     }
 

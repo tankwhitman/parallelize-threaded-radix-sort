@@ -40,7 +40,7 @@ struct {
     pthread_t threadID;
 } *thread;
 
-struct{
+struct bucket_t{
     int bucketID;
     int lowrange;
     int highrange;
@@ -105,11 +105,20 @@ int calcDig(int number)
 //genrand thread()
 void * threadFunc(void* bucketpass)
 {
-    bucket = (struct *) bucketpass;
-    int highVal = bucket.highval;
-    int lowVal = *((int*)low);
-    int numCount = *((int *) count);
+    myPrint("WOW IM IN A THREAD");
+    
+    struct bucket_t *tmpBuck = bucketpass;
+    int highVal = tmpBuck->highrange;
+    int lowVal = tmpBuck->lowrange;
+    int numCount = tmpBuck->numDig;
     int out = 0;
+    myPrint("\nhere is my high: ");
+    myPrintInt(highVal);
+    myPrint("\nLow: ");
+    myPrintInt(lowVal);
+    myPrint("\nCount");
+    myPrintInt(numCount);
+    
     union dtob num;
     for(;;)
     {
@@ -177,41 +186,44 @@ int main(int argc, char *argv[])
     int numBuckets = numDigLarge - numDigSmall + 1;
     bucket = calloc(numBuckets, sizeof(*bucket));
 
+    int j = 0;
     int tmp = largest;
-    int range[] = { 0 , 9, 10, 100, 1000, 10000, 100000, 1000000, 100000000, 99999999};
+    int range[] = {10, 100, 1000, 10000, 100000, 1000000, 100000000, 99999999};
     for(int i = 0; i < numBuckets; i ++)
     {
         if(i == 0)
         {
             bucket[i].numDig = numDigSmall;
             bucket[i].lowrange = smallest;
-            for(int j = 9; j > 0;)
+            while(range[j] < smallest)
             {
-                if(smallest < range[j])
-                {
-                    j--;
-                }
-                else
-                {
-                    bucket[i].highrange = range[j]-1;
-                }
+                j++;
             }
+            bucket[i].highrange = range[j] - 1;
+            
+        }
+        else if(i +1 == numBuckets)
+        {
+            j++;
+            bucket[i].numDig = bucket[i-1].numDig + 1;
+            bucket[i].lowrange = range[j-1];
+            bucket[i].highrange = largest;
+            break;
         }
         else
         {
+            j++;
             bucket[i].numDig = bucket[i-1].numDig + 1;
-            bucket[i].lowrange = bucket[i-1].highrange + 1;
-            bucket[i].highrange = (bucket[i].lowrange * 10) - 1;
+            bucket[i].lowrange = range[j-1];
+            bucket[i].highrange = range[j] - 1;
         }
-        
-        
-
     }
 
+    myPrint("\nACCEPTED VALUES\n");
 
 
     int valsPB = numCreate / numBuckets;
-    int openFD;
+    
 
     mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH | S_IWOTH;
     mode_t flags = O_CREAT | O_TRUNC | O_WRONLY;
@@ -220,6 +232,7 @@ int main(int argc, char *argv[])
 
     if(openFD < 0)
     {
+        perror("FILE DIDN'T OPEN");
         exit(EXIT_FAILURE);
     }
     //for loop for num of threads
@@ -230,10 +243,17 @@ int main(int argc, char *argv[])
     for(int i = 0; i < numBuckets; i++)
     {
         //create conditions for low - high bucket
+        myPrint("\nMaking thread ");
+        myPrintInt(i+1);
         s = pthread_create(&thread[i].threadID,NULL,threadFunc, &bucket[i]);
         
 
     }
+    for( int i = 0; i < numBuckets; i++)
+    {
+        pthread_join(thread[i].threadID, NULL);
+    }
+
 
     //wait for threads to exit and the close file and exit
 

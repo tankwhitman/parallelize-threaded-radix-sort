@@ -105,19 +105,13 @@ int calcDig(int number)
 //genrand thread()
 void * threadFunc(void* bucketpass)
 {
-    myPrint("WOW IM IN A THREAD");
     
     struct bucket_t *tmpBuck = bucketpass;
     int highVal = tmpBuck->highrange;
     int lowVal = tmpBuck->lowrange;
     int numCount = tmpBuck->numDig;
     int out = 0;
-    myPrint("\nhere is my high: ");
-    myPrintInt(highVal);
-    myPrint("\nLow: ");
-    myPrintInt(lowVal);
-    myPrint("\nCount");
-    myPrintInt(numCount);
+    
     
     union dtob num;
     for(;;)
@@ -185,9 +179,11 @@ int main(int argc, char *argv[])
     int numDigLarge = calcDig(largest);
     int numBuckets = numDigLarge - numDigSmall + 1;
     bucket = calloc(numBuckets, sizeof(*bucket));
+    
+    int valsPB = numCreate / numBuckets;
 
     int j = 0;
-    int tmp = largest;
+    
     int range[] = {10, 100, 1000, 10000, 100000, 1000000, 100000000, 99999999};
     for(int i = 0; i < numBuckets; i ++)
     {
@@ -217,12 +213,13 @@ int main(int argc, char *argv[])
             bucket[i].lowrange = range[j-1];
             bucket[i].highrange = range[j] - 1;
         }
+        bucket[i].numDig = valsPB;
     }
 
     myPrint("\nACCEPTED VALUES\n");
 
 
-    int valsPB = numCreate / numBuckets;
+    
     
 
     mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH | S_IWOTH;

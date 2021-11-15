@@ -2,8 +2,8 @@
 Joshua Whitman
 JSW625
 CLANG
-program 3
-
+program 4 
+paralellized radix sort generator
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,7 +80,7 @@ char * dupString(const char *val)
     strcpy(outStr, val);
     return outStr;
 }
-
+//gen rand give
 int genRand(int low, int high)
 {
   int rng = high - low + 1;
@@ -88,7 +88,7 @@ int genRand(int low, int high)
   int irnd = drnd/((double) RAND_MAX + 1) * rng;
   return low + irnd;
 }
-
+//algo to calculate the number of digits in an int
 int calcDig(int number)
 {
     int count = 0;
@@ -117,15 +117,13 @@ void * threadFunc(void* bucketpass)
     for(;;)
     {
         int chunksO = 0;
+        //generate and write 3 nums at a time to make the distrobution random
         for(; chunksO < 3; chunksO++)
         {
             num.value = genRand(lowVal, highVal);
             //CRITICAL SECTION
             pthread_mutex_lock(&mutex);
-            /*while(count == 0)
-            {
-                pthread_cond_wait(&conditional, &mutex);
-            }*/
+            
 
             write(openFD, num.bytes, 4);
 
@@ -159,7 +157,7 @@ int main(int argc, char *argv[])
     char buf[BUF_SIZE];
 
     srand(time(NULL));
-
+    //get vals
     myPrint("Please enter the smallest number :");
     read(STDIN_FILENO, &buf, BUF_SIZE) ;
     smallest = atoi(buf);
@@ -183,7 +181,7 @@ int main(int argc, char *argv[])
     int valsPB = numCreate / numBuckets;
 
     int j = 0;
-    
+    //algorithm to assign range for each bucket
     int range[] = {10, 100, 1000, 10000, 100000, 1000000, 100000000, 99999999};
     for(int i = 0; i < numBuckets; i ++)
     {
@@ -224,7 +222,7 @@ int main(int argc, char *argv[])
 
     mode_t perms = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH | S_IWOTH;
     mode_t flags = O_CREAT | O_TRUNC | O_WRONLY;
-
+    //open
     openFD = open("data.dat", flags, perms);
 
     if(openFD < 0)
@@ -233,8 +231,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     //for loop for num of threads
-    //you can spawn them to run at multiple times
-    //however you  need to use mutexes to lock the critical section - the write part.
+    
     thread = calloc(numBuckets, sizeof(*thread));
     int s;
     for(int i = 0; i < numBuckets; i++)
